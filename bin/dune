@@ -1,0 +1,4 @@
+(executable
+ (public_name bindgen)
+ (name main)
+ (libraries bindgen))
