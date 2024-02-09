@@ -1,4 +1,4 @@
 (executable
- (public_name bindgen)
+ (public_name ocaml-bindgen)
  (name main)
  (libraries bindgen))

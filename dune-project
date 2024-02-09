@@ -1,19 +1,19 @@
 (lang dune 3.13)
+(using menhir 3.0)
+(cram enable)
 
 (name bindgen)
 
 (generate_opam_files true)
 
 (source
- (github username/reponame))
+ (github ocaml-sys/ocaml-bindgen))
 
-(authors "Author Name")
+(authors "Leandro Ostera <leandro@abstractmachines.dev>")
 
-(maintainers "Maintainer Name")
+(maintainers "Leandro Ostera <leandro@abstractmachines.dev>")
 
-(license LICENSE)
-
-(documentation https://url/to/documentation)
+(license MIT)
 
 (package
  (name bindgen)
@@ -22,5 +22,3 @@
  (depends ocaml dune)
  (tags
   (topics "to describe" your project)))
-
-; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project

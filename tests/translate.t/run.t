@@ -1,0 +1,1 @@
+  $ ocaml-bindgen empty.c

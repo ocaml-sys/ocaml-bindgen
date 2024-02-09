@@ -1,2 +1,3 @@
 (library
- (name bindgen))
+ (name bindgen)
+ (libraries clangml))
