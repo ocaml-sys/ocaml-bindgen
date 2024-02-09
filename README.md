@@ -1,8 +1,12 @@
 # `bindgen`
 
-`bindgen` automatically generates OCaml FFI bindings to C (and some C++)
-librariesboth as OCaml external definitions, types, constants, and the
+`bindgen` automatically generates raw OCaml FFI bindings to C (and some C++)
+libraries both as OCaml external definitions, types, constants, and the
 appropriate C shim code.
+
+**Non-goals**: It does not aim to provide very safe, very idiomatic, pure
+bindings, but rather give you direct access to the underlying C library with a
+few conveniences. But you're more than welcome to build idiomatic, type-safe wrappers for bindgen generated libraries.
 
 For example, given the C header `doggo.h`:
 

@@ -1,9 +1,12 @@
 type field = { fld_name : string }
 
-type item =
-  | Ir_record of { rec_name : string; rec_fields : field list }
-  | Ir_variant of { var_name : string }
+type ir_type =
+  | Abstract of string
+  | Record of { rec_name : string; rec_fields : field list }
+  | Enum of { enum_name : string }
+  | Ptr of ir_type
 
+type item = Ir_type of ir_type
 type t = { items : item list; lib_name : string }
 
 module Lift = struct
@@ -13,13 +16,15 @@ module Lift = struct
     | _ -> assert false
 
   let lift_record (record : Clang.Ast.record_decl) =
-    if record.name = "" then None
-    else
-      let rec_fields = List.map lift_record_field record.fields in
-      Some (Ir_record { rec_name = record.name; rec_fields })
+    match (record.name, record.fields) with
+    | "", _ -> None
+    | _, [] -> Some (Ir_type (Abstract record.name))
+    | _ ->
+        let rec_fields = List.map lift_record_field record.fields in
+        Some (Ir_type (Record { rec_name = record.name; rec_fields }))
 
   let lift_enum name _constants _complete_definition _attributes =
-    if name = "" then None else Some (Ir_variant { var_name = name })
+    if name = "" then None else Some (Ir_type (Enum { enum_name = name }))
 
   let lift ~name (clang_ast : Clang.Ast.translation_unit) : t =
     let node : Clang.Ast.translation_unit_desc = clang_ast.desc in

@@ -129,7 +129,7 @@ let from_ir (ir : Ir.t) : program =
   List.filter_map
     (fun node ->
       match node with
-      | Ir.Ir_record { rec_name; rec_fields } ->
+      | Ir.Ir_type (Record { rec_name; rec_fields }) ->
           Some
             [
               Shims.of_value rec_name rec_fields;
