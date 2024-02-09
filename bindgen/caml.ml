@@ -20,7 +20,7 @@ let rec core_type_from_ir typ =
   | Ir.Prim Bool -> Typ.constr (lid "bool") []
   | Ir.Prim Char -> Typ.constr (lid "char") []
   | Ir.Prim Void -> Typ.constr (lid "unit") []
-  | Ir.Ptr t -> Typ.constr (lid "ptr") [ core_type_from_ir t ]
+  | Ir.Ptr t -> core_type_from_ir t
   | Ir.Func { fn_ret; fn_params } ->
       List.fold_left
         (fun acc (name, typ) ->

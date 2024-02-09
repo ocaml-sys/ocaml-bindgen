@@ -1,6 +1,6 @@
 let translate ~file ~name =
   let ast = Parser.parse file in
-  let ir = Ir.lift ~name ast in
+  let ir = Ir.lift ~name ~header:file ast in
   let dunefile = Dunefile.from_ir ir in
   let caml = Caml.from_ir ir in
   let c = C.from_ir ir in

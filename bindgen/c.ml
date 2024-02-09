@@ -19,8 +19,10 @@ type t =
   | C_variable of string
   | C_return of t
   | C_type of c_type
+  | C_include of string
 
 type program = t list
+
 
 let pp_list sep pp_el fmt t =
   Format.pp_print_list
@@ -50,6 +52,7 @@ and pp_t fmt t =
   | C_variable s -> Format.fprintf fmt "%s" s
   | C_return t -> Format.fprintf fmt "return %a" pp_t t
   | C_type t -> Format.fprintf fmt "%a" pp_type t
+  | C_include s -> Format.fprintf fmt "#include %s\n" s
 
 and pp_arg fmt (ctype, name) = Format.fprintf fmt "%a %s" pp_type ctype name
 
@@ -79,7 +82,7 @@ let return x = C_return x
 (* caml functions *)
 let caml_params x = call ("CAMLparam" ^ Int.to_string (List.length x)) x
 let caml_locals x = call ("CAMLlocal" ^ Int.to_string (List.length x)) x
-let caml_return0 = call "CAMLreturn0" []
+let caml_return0 = var "CAMLreturn0"
 let caml_return x = call "CAMLreturn" [ x ]
 
 let caml_alloc_tuple fields =
@@ -87,7 +90,7 @@ let caml_alloc_tuple fields =
 
 let store_field var idx value = call "Store_field" [ var; int idx; value ]
 let val_int var name = call "Val_int" [ ptr_field var name ]
-let int_val var idx = call "Int_val" [ call "Field" [ int idx; var ] ]
+let int_val var idx = call "Int_val" [ call "Field" [ var; int idx] ]
 
 (* from_ir *)
 let rec ctype_of_ir (ir_type : Ir.ir_type) =
@@ -136,7 +139,7 @@ module Shims = struct
       {
         fn_ret = Ptr (Prim name);
         fn_name = caml_ ^ name ^ "_of_value";
-        fn_params = [ (Ptr (Struct "value"), "caml_x") ];
+        fn_params = [ (Prim "value", "caml_x") ];
         fn_body =
           [
             decl (Ptr (Prim name)) "x"
@@ -159,7 +162,7 @@ module Shims = struct
 
         let fn_body =
           let declare_params =
-            [ caml_params [ int (List.length fn_params) ] ]
+            [ caml_params (List.map (fun (name, _type) -> var (caml_^name)) fn_params ) ]
           in
           let maybe_declare_result =
             match fn_ret with
@@ -212,7 +215,17 @@ module Shims = struct
 end
 
 let from_ir (ir : Ir.t) : program =
-  List.filter_map
+  [
+    C_include (Format.sprintf "%S" ir.header);
+    C_include "<caml/alloc.h>";
+    C_include "<caml/callback.h>";
+    C_include "<caml/fail.h>";
+    C_include "<caml/memory.h>";
+    C_include "<caml/mlvalues.h>";
+    C_include "<caml/unixsupport.h>";
+  ]
+  @
+  (List.filter_map
     (fun node ->
       match node with
       | Ir.Ir_fun_decl fun_decl -> Some [ Shims.wrap_fun fun_decl ]
@@ -224,4 +237,4 @@ let from_ir (ir : Ir.t) : program =
             ]
       | _ -> None)
     ir.items
-  |> List.flatten
+  |> List.flatten)

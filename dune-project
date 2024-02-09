@@ -1,5 +1,6 @@
 (lang dune 3.13)
 (using menhir 3.0)
+(using directory-targets 0.1)
 (cram enable)
 
 (name bindgen)

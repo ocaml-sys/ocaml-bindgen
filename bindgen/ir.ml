@@ -12,7 +12,7 @@ and ir_field = { fld_name : string; fld_type : ir_type }
 
 type ir_fun_decl = { fndcl_name : string; fndcl_type : ir_type }
 type ir_item = Ir_type of ir_type | Ir_fun_decl of ir_fun_decl
-type t = { items : ir_item list; lib_name : string }
+type t = { items : ir_item list; lib_name : string; header: string }
 
 module Lift = struct
   let lift_name name =
@@ -64,7 +64,7 @@ module Lift = struct
     let fndcl_type = lift_function_type fn.function_type in
     Some (Ir_fun_decl { fndcl_name; fndcl_type })
 
-  let lift ~name (clang_ast : Clang.Ast.translation_unit) : t =
+  let lift ~name ~header (clang_ast : Clang.Ast.translation_unit) : t =
     let node : Clang.Ast.translation_unit_desc = clang_ast.desc in
     let items =
       List.filter_map
@@ -91,7 +91,7 @@ module Lift = struct
               None)
         node.items
     in
-    { lib_name = name; items }
+    { lib_name = name; header ;items }
 end
 
 let lift = Lift.lift
