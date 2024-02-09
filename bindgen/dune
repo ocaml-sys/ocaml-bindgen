@@ -1,3 +1,4 @@
 (library
  (name bindgen)
- (libraries clangml))
+ (preprocess (pps  ppxlib.metaquot))
+ (libraries clangml ppxlib compiler-libs))

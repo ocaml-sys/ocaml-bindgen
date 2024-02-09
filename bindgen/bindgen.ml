@@ -1,5 +1,8 @@
-let translate file = 
+let translate ~file ~name = 
   let ast = Parser.parse file in
   let ir = Ir.lift ast in
-  let caml = Codegen.to_caml ir in
-  Format.printf "%a" (Printast.structure 0) caml
+  let caml = Caml.from_ir ir in
+  let c = C.from_ir ir in
+  Codegen.write_caml_files caml (name ^ ".ml");
+  Codegen.write_c_files c ("caml_"^ name ^ ".c");
+  ()
