@@ -1,13 +1,17 @@
-type node = Ir_record of { rec_name : string }
-type t = node list
+type item = Ir_record of { rec_name : string }
+type t = {
+  items: item list;
+  lib_name: string
+}
+
 
 module Lift = struct
   let lift_record (record : Clang.Ast.record_decl) =
     Ir_record { rec_name = record.name }
 
-  let lift (clang_ast : Clang.Ast.translation_unit) : t =
+  let lift ~name (clang_ast : Clang.Ast.translation_unit) : t =
     let node : Clang.Ast.translation_unit_desc = clang_ast.desc in
-    List.filter_map
+    let items = List.filter_map
       (fun (x : Clang.Ast.decl) ->
         let desc : Clang.Ast.decl_desc = x.desc in
         match desc with
@@ -27,6 +31,8 @@ module Lift = struct
         | Clang.Ast.UnknownDecl (_, _) ->
             None)
       node.items
+    in
+    { lib_name=name; items }
 end
 
 let lift = Lift.lift

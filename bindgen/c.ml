@@ -21,7 +21,7 @@ let from_ir (ir : Ir.t) : Clang.Ast.translation_unit =
               }
             in
             Ast.node (Ast.RecordDecl record))
-      ir
+      ir.items
   in
   let desc = { filename = "file.c"; items } in
   Ast.node desc
