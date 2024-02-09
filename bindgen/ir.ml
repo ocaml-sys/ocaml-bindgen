@@ -7,7 +7,8 @@ type t = {
 
 module Lift = struct
   let lift_record (record : Clang.Ast.record_decl) =
-    Ir_record { rec_name = record.name }
+    if record.name = "" then None else Some
+    (Ir_record { rec_name = record.name })
 
   let lift ~name (clang_ast : Clang.Ast.translation_unit) : t =
     let node : Clang.Ast.translation_unit_desc = clang_ast.desc in
@@ -15,7 +16,7 @@ module Lift = struct
       (fun (x : Clang.Ast.decl) ->
         let desc : Clang.Ast.decl_desc = x.desc in
         match desc with
-        | Clang.Ast.RecordDecl record -> Some (lift_record record)
+        | Clang.Ast.RecordDecl record -> (lift_record record)
         | Clang.Ast.EnumDecl _ | Clang.Ast.TemplateDecl _ | Clang.Ast.Function _
         | Clang.Ast.TemplatePartialSpecialization _ | Clang.Ast.CXXMethod _
         | Clang.Ast.Var _ | Clang.Ast.TypedefDecl _ | Clang.Ast.Field _
