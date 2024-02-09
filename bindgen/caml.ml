@@ -3,27 +3,42 @@ open Ast_helper
 
 let loc = !default_loc
 let with_loc txt : str = { txt; loc }
+let lid name = Location.mkloc (Longident.unflatten [ name ] |> Option.get) loc
+let type_name name = String.lowercase_ascii name |> with_loc
+
+let core_type_from_ir typ =
+  match typ with
+  | Ir.Abstract name -> Typ.constr (lid name) []
+  | Ir.Enum { enum_name } -> Typ.constr (lid enum_name) []
+  | Ir.Record { rec_name; _ } -> Typ.constr (lid rec_name) []
+  | Ir.Prim Int -> Typ.constr (lid "int") []
+  | Ir.Prim Bool -> Typ.constr (lid "bool") []
+  | Ir.Prim Char -> Typ.constr (lid "char") []
+  | _ -> assert false
 
 let type_from_ir typ =
   match typ with
-  | Ir.Abstract name ->
-      let typ = Type.mk ~loc (with_loc name) in
-      Ast_helper.Str.type_ Nonrecursive [ typ ]
-  | Ir.Enum { enum_name } ->
-      let typ = Type.mk ~loc (with_loc enum_name) in
-      Ast_helper.Str.type_ Nonrecursive [ typ ]
+  | Ir.Abstract name -> Some (Type.mk ~loc (type_name name))
+  | Ir.Enum { enum_name } -> Some (Type.mk ~loc (type_name enum_name))
   | Ir.Record { rec_name; rec_fields } ->
       let labels =
         List.map
-          Ir.(fun fld -> Type.field (with_loc fld.fld_name) (Typ.any ~loc ()))
+          Ir.(
+            fun fld ->
+              let fld_type = core_type_from_ir fld.fld_type in
+              Type.field (with_loc fld.fld_name) fld_type)
           rec_fields
       in
       let kind = Ptype_record labels in
-      let typ = Type.mk ~loc ~kind { txt = rec_name; loc } in
-      Str.type_ Nonrecursive [ typ ]
-  | Ir.Ptr _ -> assert false
+      Some (Type.mk ~loc ~kind (type_name rec_name))
+  | _ -> None
+
+let str_type_from_ir typ =
+  match type_from_ir typ with
+  | Some typ -> Some (Str.type_ Nonrecursive [ typ ])
+  | None -> None
 
 let from_ir (ir : Ir.t) : Parsetree.structure =
-  List.map
-    (fun node -> match node with Ir.Ir_type typ -> type_from_ir typ)
+  List.filter_map
+    (fun node -> match node with Ir.Ir_type typ -> str_type_from_ir typ)
     ir.items

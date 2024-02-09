@@ -1,18 +1,30 @@
-type field = { fld_name : string }
+type ir_prim_type = Int | Bool | Char
 
 type ir_type =
   | Abstract of string
-  | Record of { rec_name : string; rec_fields : field list }
+  | Record of { rec_name : string; rec_fields : ir_field list }
   | Enum of { enum_name : string }
+  | Prim of ir_prim_type
   | Ptr of ir_type
 
-type item = Ir_type of ir_type
-type t = { items : item list; lib_name : string }
+and ir_field = { fld_name : string; fld_type : ir_type }
+
+type ir_item = Ir_type of ir_type
+type t = { items : ir_item list; lib_name : string }
 
 module Lift = struct
+  let lift_type (typ : Clang.Type.t) =
+    match typ.desc with
+    | Clang.Ast.BuiltinType Int -> Prim Int
+    | Clang.Ast.BuiltinType Bool -> Prim Bool
+    | Clang.Ast.BuiltinType Char_S -> Prim Char
+    | _ -> assert false
+
   let lift_record_field (field : Clang.Ast.decl) =
     match field.desc with
-    | Clang.Ast.Field { name; _ } -> { fld_name = name }
+    | Clang.Ast.Field { name; qual_type; _ } ->
+        let fld_type = lift_type qual_type in
+        { fld_name = name; fld_type }
     | _ -> assert false
 
   let lift_record (record : Clang.Ast.record_decl) =
