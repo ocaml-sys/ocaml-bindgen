@@ -3,10 +3,15 @@ open Ast_helper
 
 let loc = !default_loc
 let with_loc txt : str = { txt; loc }
-let lid name = Location.mkloc (Longident.unflatten [ name ] |> Option.get) loc
+
+let lid name =
+  Location.mkloc
+    (Longident.unflatten [ String.lowercase_ascii name ] |> Option.get)
+    loc
+
 let type_name name = String.lowercase_ascii name |> with_loc
 
-let core_type_from_ir typ =
+let rec core_type_from_ir typ =
   match typ with
   | Ir.Abstract name -> Typ.constr (lid name) []
   | Ir.Enum { enum_name } -> Typ.constr (lid enum_name) []
@@ -14,7 +19,15 @@ let core_type_from_ir typ =
   | Ir.Prim Int -> Typ.constr (lid "int") []
   | Ir.Prim Bool -> Typ.constr (lid "bool") []
   | Ir.Prim Char -> Typ.constr (lid "char") []
-  | _ -> assert false
+  | Ir.Prim Void -> Typ.constr (lid "unit") []
+  | Ir.Ptr t -> Typ.constr (lid "ptr") [ core_type_from_ir t ]
+  | Ir.Func { fn_ret; fn_params } ->
+      List.fold_left
+        (fun acc (name, typ) ->
+          let label = Asttypes.Labelled name in
+          let typ = core_type_from_ir typ in
+          Typ.arrow label typ acc)
+        (core_type_from_ir fn_ret) fn_params
 
 let type_from_ir typ =
   match typ with
@@ -38,7 +51,19 @@ let str_type_from_ir typ =
   | Some typ -> Some (Str.type_ Nonrecursive [ typ ])
   | None -> None
 
+let str_external_from_ir ({ fndcl_name; fndcl_type } : Ir.ir_fun_decl) =
+  let prim =
+    Val.mk
+      ~prim:[ "caml_" ^ fndcl_name ]
+      ~loc (with_loc fndcl_name)
+      (core_type_from_ir fndcl_type)
+  in
+  Some (Str.primitive ~loc prim)
+
 let from_ir (ir : Ir.t) : Parsetree.structure =
   List.filter_map
-    (fun node -> match node with Ir.Ir_type typ -> str_type_from_ir typ)
+    (fun node ->
+      match node with
+      | Ir.Ir_type typ -> str_type_from_ir typ
+      | Ir.Ir_fun_decl fun_dcl -> str_external_from_ir fun_dcl)
     ir.items

@@ -70,6 +70,7 @@ let int x = C_prim (Int x)
 let string x = C_prim (Str x)
 let ptr_field pfa_name pfa_field = C_ptr_field_access { pfa_name; pfa_field }
 let typ t = C_type t
+let field acc_name acc_field = C_field_access { acc_name; acc_field }
 
 module Shims = struct
   let to_value name fields =
@@ -108,18 +109,13 @@ module Shims = struct
           [
             decl (Ptr (Prim name)) "x"
               (Some (call "malloc" [ call "sizeof" [ typ (Struct name) ] ]));
-            assign (var "caml_x")
-              (call "caml_alloc_tuple" [ int (List.length fields) ]);
           ]
           @ Ir.(
               List.mapi
-                (fun idx field ->
-                  call "Store_field"
-                    [
-                      var "caml_x";
-                      int idx;
-                      call "Val_int" [ ptr_field (var "x") field.fld_name ];
-                    ])
+                (fun idx fld ->
+                  assign
+                    (field (var "x") fld.fld_name)
+                    (call "Val_int" [ call "Field" [ int idx; var "caml_x" ] ]))
                 fields)
           @ [ call "CAMLreturn" [ var "caml_x" ] ];
       }

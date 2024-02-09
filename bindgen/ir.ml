@@ -1,4 +1,4 @@
-type ir_prim_type = Int | Bool | Char
+type ir_prim_type = Int | Bool | Char | Void
 
 type ir_type =
   | Abstract of string
@@ -6,18 +6,27 @@ type ir_type =
   | Enum of { enum_name : string }
   | Prim of ir_prim_type
   | Ptr of ir_type
+  | Func of { fn_ret : ir_type; fn_params : (string * ir_type) list }
 
 and ir_field = { fld_name : string; fld_type : ir_type }
 
-type ir_item = Ir_type of ir_type
+type ir_fun_decl = { fndcl_name : string; fndcl_type : ir_type }
+type ir_item = Ir_type of ir_type | Ir_fun_decl of ir_fun_decl
 type t = { items : ir_item list; lib_name : string }
 
 module Lift = struct
-  let lift_type (typ : Clang.Type.t) =
+  let lift_name name =
+    match name with Clang.Ast.IdentifierName x -> x | _ -> assert false
+
+  let rec lift_type (typ : Clang.Type.t) =
+    (* Format.printf "lift_type: %S\n" (Clang.Type.show typ); *)
     match typ.desc with
     | Clang.Ast.BuiltinType Int -> Prim Int
     | Clang.Ast.BuiltinType Bool -> Prim Bool
     | Clang.Ast.BuiltinType Char_S -> Prim Char
+    | Clang.Ast.BuiltinType Void -> Prim Void
+    | Clang.Ast.Pointer t -> Ptr (lift_type t)
+    | Clang.Ast.Typedef t -> Abstract (lift_name t.name)
     | _ -> assert false
 
   let lift_record_field (field : Clang.Ast.decl) =
@@ -38,6 +47,23 @@ module Lift = struct
   let lift_enum name _constants _complete_definition _attributes =
     if name = "" then None else Some (Ir_type (Enum { enum_name = name }))
 
+  let lift_function_param (param : Clang.Ast.parameter) =
+    (param.desc.name, lift_type param.desc.qual_type)
+
+  let lift_function_type (fn_type : Clang.Ast.function_type) =
+    let fn_ret = lift_type fn_type.result in
+    let fn_params =
+      match fn_type.parameters with
+      | Some { non_variadic; _ } -> List.map lift_function_param non_variadic
+      | None -> []
+    in
+    Func { fn_ret; fn_params }
+
+  let lift_function (fn : Clang.Ast.function_decl) =
+    let fndcl_name = lift_name fn.name in
+    let fndcl_type = lift_function_type fn.function_type in
+    Some (Ir_fun_decl { fndcl_name; fndcl_type })
+
   let lift ~name (clang_ast : Clang.Ast.translation_unit) : t =
     let node : Clang.Ast.translation_unit_desc = clang_ast.desc in
     let items =
@@ -45,22 +71,22 @@ module Lift = struct
         (fun (x : Clang.Ast.decl) ->
           let desc : Clang.Ast.decl_desc = x.desc in
           match desc with
+          | Clang.Ast.Function fn -> lift_function fn
           | Clang.Ast.RecordDecl record -> lift_record record
           | Clang.Ast.EnumDecl
               { name; constants; complete_definition; attributes } ->
               lift_enum name constants complete_definition attributes
-          | Clang.Ast.TemplateDecl _ | Clang.Ast.Function _
-          | Clang.Ast.TemplatePartialSpecialization _ | Clang.Ast.CXXMethod _
-          | Clang.Ast.Var _ | Clang.Ast.TypedefDecl _ | Clang.Ast.Field _
-          | Clang.Ast.IndirectField _ | Clang.Ast.AccessSpecifier _
-          | Clang.Ast.Namespace _ | Clang.Ast.UsingDirective _
-          | Clang.Ast.UsingDeclaration _ | Clang.Ast.Constructor _
-          | Clang.Ast.Destructor _ | Clang.Ast.LinkageSpec _
-          | Clang.Ast.TemplateTemplateParameter _ | Clang.Ast.Friend _
-          | Clang.Ast.NamespaceAlias _ | Clang.Ast.EmptyDecl
-          | Clang.Ast.Directive _ | Clang.Ast.StaticAssert _
-          | Clang.Ast.TypeAlias _ | Clang.Ast.Decomposition _
-          | Clang.Ast.Concept _ | Clang.Ast.Export _
+          | Clang.Ast.TemplateDecl _ | Clang.Ast.TemplatePartialSpecialization _
+          | Clang.Ast.CXXMethod _ | Clang.Ast.Var _ | Clang.Ast.TypedefDecl _
+          | Clang.Ast.Field _ | Clang.Ast.IndirectField _
+          | Clang.Ast.AccessSpecifier _ | Clang.Ast.Namespace _
+          | Clang.Ast.UsingDirective _ | Clang.Ast.UsingDeclaration _
+          | Clang.Ast.Constructor _ | Clang.Ast.Destructor _
+          | Clang.Ast.LinkageSpec _ | Clang.Ast.TemplateTemplateParameter _
+          | Clang.Ast.Friend _ | Clang.Ast.NamespaceAlias _
+          | Clang.Ast.EmptyDecl | Clang.Ast.Directive _
+          | Clang.Ast.StaticAssert _ | Clang.Ast.TypeAlias _
+          | Clang.Ast.Decomposition _ | Clang.Ast.Concept _ | Clang.Ast.Export _
           | Clang.Ast.UnknownDecl (_, _) ->
               None)
         node.items
