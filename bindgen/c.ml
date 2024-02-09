@@ -30,7 +30,7 @@ let rec pp fmt program = List.iter (fun (t : t) -> pp_t fmt t) program
 and pp_t fmt t =
   match t with
   | C_function { fn_ret; fn_name; fn_params; fn_body } ->
-      Format.fprintf fmt "%a %s(%a) {\n  %a\n}\n\n" pp_type fn_ret fn_name
+      Format.fprintf fmt "%a %s(%a) {\n  %a;\n}\n\n" pp_type fn_ret fn_name
         (pp_list ", " pp_arg) fn_params (pp_list ";\n  " pp_t) fn_body
   | C_call { cc_name; cc_args } ->
       Format.fprintf fmt "%s(%a)" cc_name (pp_list ", " pp_t) cc_args
@@ -71,6 +71,7 @@ let string x = C_prim (Str x)
 let ptr_field pfa_name pfa_field = C_ptr_field_access { pfa_name; pfa_field }
 let typ t = C_type t
 let field acc_name acc_field = C_field_access { acc_name; acc_field }
+let return x = C_return x
 
 module Shims = struct
   let to_value name fields =
@@ -114,10 +115,10 @@ module Shims = struct
               List.mapi
                 (fun idx fld ->
                   assign
-                    (field (var "x") fld.fld_name)
+                    (ptr_field (var "x") fld.fld_name)
                     (call "Val_int" [ call "Field" [ int idx; var "caml_x" ] ]))
                 fields)
-          @ [ call "CAMLreturn" [ var "caml_x" ] ];
+          @ [ return (var "x") ];
       }
 end
 
