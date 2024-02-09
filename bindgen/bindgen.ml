@@ -1,4 +1,4 @@
-let translate ~file ~name = 
+let translate ~file ~name =
   let ast = Parser.parse file in
   let ir = Ir.lift ~name ast in
   let dunefile = Dunefile.from_ir ir in
