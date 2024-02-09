@@ -29,7 +29,8 @@ type doggo = {
   wow: char
 }
 
-external eleven_out_of_ten_majestic_af : doggo -> unit = "caml_bindgen_doggo__eleven_out_of_ten_majestic_af"
+external eleven_out_of_ten_majestic_af : doggo -> unit
+    = "caml_eleven_out_of_ten_majestic_af"
 ```
 
 And the follow C shim:
@@ -53,7 +54,7 @@ Doggo* caml_Doggo_of_value(value caml_pupper) {
     return pupper
 }
 
-CAMLprim value caml_bindgen_doggo__eleven_out_of_ten_majestic_af(value caml_pupper) {
+CAMLprim value caml_eleven_out_of_ten_majestic_af(value caml_pupper) {
     CAMLparam1(caml_pupper);
     Doggo* pupper = caml_Doggo_of_value(caml_pupper);
     // actual C call

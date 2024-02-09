@@ -1,4 +1,6 @@
-type c_type = Prim of string | Struct of string | Ptr of c_type
+let caml_ = "caml_"
+
+type c_type = Prim of string | Struct of string | Ptr of c_type | Void
 type c_prim = Int of int | Str of string
 
 type t =
@@ -56,6 +58,7 @@ and pp_type fmt (ctype : c_type) =
   | Prim x -> Format.fprintf fmt "%s" x
   | Struct s -> Format.fprintf fmt "struct %s" s
   | Ptr t -> Format.fprintf fmt "%a*" pp_type t
+  | Void -> Format.fprintf fmt "void"
 
 and pp_prim fmt (prim : c_prim) =
   match prim with
@@ -73,38 +76,66 @@ let typ t = C_type t
 let field acc_name acc_field = C_field_access { acc_name; acc_field }
 let return x = C_return x
 
+(* caml functions *)
+let caml_params x = call ("CAMLparam" ^ Int.to_string (List.length x)) x
+let caml_locals x = call ("CAMLlocal" ^ Int.to_string (List.length x)) x
+let caml_return0 = call "CAMLreturn0" []
+let caml_return x = call "CAMLreturn" [ x ]
+
+let caml_alloc_tuple fields =
+  call "caml_alloc_tuple" [ int (List.length fields) ]
+
+let store_field var idx value = call "Store_field" [ var; int idx; value ]
+let val_int var name = call "Val_int" [ ptr_field var name ]
+let int_val var idx = call "Int_val" [ call "Field" [ int idx; var ] ]
+
+(* from_ir *)
+let rec ctype_of_ir (ir_type : Ir.ir_type) =
+  match ir_type with
+  | Ir.Abstract s -> Prim s
+  | Ir.Record { rec_name; _ } -> Prim rec_name
+  | Ir.Enum { enum_name } -> Prim enum_name
+  | Ir.Prim Ir.Int -> Prim "int"
+  | Ir.Prim Ir.Bool -> Prim "bool"
+  | Ir.Prim Ir.Char -> Prim "char"
+  | Ir.Prim Ir.Void -> Void
+  | Ir.Ptr t -> Ptr (ctype_of_ir t)
+  | Ir.Func _ -> assert false
+
+let rec ctype_name typ =
+  match typ with
+  | Prim n -> n
+  | Struct n -> n
+  | Void -> "void"
+  | Ptr t -> ctype_name t
+
 module Shims = struct
   let to_value name fields =
     C_function
       {
         fn_ret = Prim "value";
-        fn_name = "caml_" ^ name ^ "_to_value";
+        fn_name = caml_ ^ name ^ "_to_value";
         fn_params = [ (Ptr (Struct name), "x") ];
         fn_body =
           [
-            call "CAMLparam0" [];
-            call "CAMLlocal1" [ var "caml_x" ];
-            assign (var "caml_x")
-              (call "caml_alloc_tuple" [ int (List.length fields) ]);
+            caml_params [];
+            caml_locals [ var "caml_x" ];
+            assign (var "caml_x") (caml_alloc_tuple fields);
           ]
           @ Ir.(
               List.mapi
                 (fun idx field ->
-                  call "Store_field"
-                    [
-                      var "caml_x";
-                      int idx;
-                      call "Val_int" [ ptr_field (var "x") field.fld_name ];
-                    ])
+                  store_field (var "caml_x") idx
+                    (val_int (var "x") field.fld_name))
                 fields)
-          @ [ call "CAMLreturn" [ var "caml_x" ] ];
+          @ [ caml_return (var "caml_x") ];
       }
 
   let of_value name fields =
     C_function
       {
         fn_ret = Ptr (Prim name);
-        fn_name = "caml_" ^ name ^ "_of_value";
+        fn_name = caml_ ^ name ^ "_of_value";
         fn_params = [ (Ptr (Struct "value"), "caml_x") ];
         fn_body =
           [
@@ -116,16 +147,75 @@ module Shims = struct
                 (fun idx fld ->
                   assign
                     (ptr_field (var "x") fld.fld_name)
-                    (call "Val_int" [ call "Field" [ int idx; var "caml_x" ] ]))
+                    (int_val (var "caml_x") idx))
                 fields)
           @ [ return (var "x") ];
       }
+
+  let wrap_fun Ir.{ fndcl_name; fndcl_type } =
+    match fndcl_type with
+    | Func { fn_ret; fn_params } ->
+        let fn_ret = ctype_of_ir fn_ret in
+
+        let fn_body =
+          let declare_params =
+            [ caml_params [ int (List.length fn_params) ] ]
+          in
+          let maybe_declare_result =
+            match fn_ret with
+            | Void -> []
+            | _ -> [ caml_locals [ var "result" ] ]
+          in
+
+          let transform_values =
+            List.map
+              (fun (name, param_type) ->
+                let c_type = ctype_of_ir param_type in
+                let c_type_name = ctype_name c_type in
+                decl c_type name
+                  (Some
+                     (call
+                        (caml_ ^ c_type_name ^ "_of_value")
+                        [ var (caml_ ^ name) ])))
+              fn_params
+          in
+
+          let call_and_return =
+            let fn_call =
+              call fndcl_name (List.map (fun (param, _) -> var param) fn_params)
+            in
+            match fn_ret with
+            | Void -> [ fn_call; caml_return0 ]
+            | _ -> [ assign (var "result") fn_call; caml_return (var "result") ]
+          in
+
+          List.flatten
+            [
+              declare_params;
+              maybe_declare_result;
+              transform_values;
+              call_and_return;
+            ]
+        in
+
+        C_function
+          {
+            fn_ret;
+            fn_params =
+              List.map
+                (fun (name, _type) -> (Prim "value", caml_ ^ name))
+                fn_params;
+            fn_name = caml_ ^ fndcl_name;
+            fn_body;
+          }
+    | _ -> assert false
 end
 
 let from_ir (ir : Ir.t) : program =
   List.filter_map
     (fun node ->
       match node with
+      | Ir.Ir_fun_decl fun_decl -> Some [ Shims.wrap_fun fun_decl ]
       | Ir.Ir_type (Record { rec_name; rec_fields }) ->
           Some
             [
