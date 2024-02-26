@@ -14,7 +14,7 @@ let type_name name = String.lowercase_ascii name |> with_loc
 let rec core_type_from_ir typ =
   match typ with
   | Ir.Abstract name -> Typ.constr (lid name) []
-  | Ir.Enum { enum_name } -> Typ.constr (lid enum_name) []
+  | Ir.Enum { enum_name; _} -> Typ.constr (lid enum_name) []
   | Ir.Record { rec_name; _ } -> Typ.constr (lid rec_name) []
   | Ir.Prim Int -> Typ.constr (lid "int") []
   | Ir.Prim Bool -> Typ.constr (lid "bool") []
@@ -29,10 +29,23 @@ let rec core_type_from_ir typ =
           Typ.arrow label typ acc)
         (core_type_from_ir fn_ret) fn_params
 
-let type_from_ir typ =
+let type_from_ir typ = let open Ir in
   match typ with
   | Ir.Abstract name -> Some (Type.mk ~loc (type_name name))
-  | Ir.Enum { enum_name } -> Some (Type.mk ~loc (type_name enum_name))
+  | Ir.Enum { enum_name; enum_variants } -> 
+    let variants = List.map
+      (fun v -> 
+        {
+     pcd_name = { txt = v.variant_name; loc= Location.none };
+     pcd_vars = [];
+     pcd_args = Pcstr_tuple [];
+     pcd_res = None;
+     pcd_loc = Location.none;
+     pcd_attributes =[];  
+    }
+      ) enum_variants in
+    let kind = Ptype_variant variants in
+    Some (Type.mk ~loc ~kind (type_name enum_name))
   | Ir.Record { rec_name; rec_fields } ->
       let labels =
         List.map

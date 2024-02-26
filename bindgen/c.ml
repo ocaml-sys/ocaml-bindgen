@@ -97,7 +97,7 @@ let rec ctype_of_ir (ir_type : Ir.ir_type) =
   match ir_type with
   | Ir.Abstract s -> Prim s
   | Ir.Record { rec_name; _ } -> Prim rec_name
-  | Ir.Enum { enum_name } -> Prim enum_name
+  | Ir.Enum { enum_name; _ } -> Prim enum_name
   | Ir.Prim Ir.Int -> Prim "int"
   | Ir.Prim Ir.Bool -> Prim "bool"
   | Ir.Prim Ir.Char -> Prim "char"

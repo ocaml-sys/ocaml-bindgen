@@ -1,5 +1,12 @@
+typedef enum breed {
+    Labrador,
+    GoldenRetriever,
+    Pug
+} breed;
+
 typedef struct Doggo {
     int many;
+    breed breed;
     char wow;
 } Doggo;
 
