@@ -1,7 +1,8 @@
 typedef enum breed {
     Labrador,
-    GoldenRetriever,
-    Pug
+    _GoldenRetriever,
+    pug,
+    _poodle
 } breed;
 
 typedef struct Doggo {

@@ -11,10 +11,22 @@ let lid name =
 
 let type_name name = String.lowercase_ascii name |> with_loc
 
+let enum_valid_name name : string =
+  let rec rm_underscore_and_capitalize s =
+    if String.length s = 0 then s
+    else
+      match String.get s 0 with
+      | '_' ->
+          "Under"
+          ^ rm_underscore_and_capitalize (String.sub s 1 (String.length s - 1))
+      | _ -> String.capitalize_ascii s
+  in
+  rm_underscore_and_capitalize name
+
 let variant_from_enum (ir_enum : Ir.ir_enum_variant) : constructor_declaration =
   (* C enums don't carry data so most of the fields are left empty / default *)
   {
-    pcd_name = with_loc ir_enum.variant_name;
+    pcd_name = with_loc (enum_valid_name ir_enum.variant_name);
     pcd_vars = [];
     pcd_args = Pcstr_tuple [];
     pcd_res = None;
