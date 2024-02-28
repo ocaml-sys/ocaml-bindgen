@@ -9,11 +9,11 @@ type ir_type =
   | Func of { fn_ret : ir_type; fn_params : (string * ir_type) list }
 
 and ir_field = { fld_name : string; fld_type : ir_type }
-and ir_enum_variant = { variant_name : string; constant: int }
+and ir_enum_variant = { variant_name : string; constant : int }
 
 type ir_fun_decl = { fndcl_name : string; fndcl_type : ir_type }
 type ir_item = Ir_type of ir_type | Ir_fun_decl of ir_fun_decl
-type t = { items : ir_item list; lib_name : string; header: string }
+type t = { items : ir_item list; lib_name : string; header : string }
 
 module Lift = struct
   let lift_name name =
@@ -45,17 +45,17 @@ module Lift = struct
         let rec_fields = List.map lift_record_field record.fields in
         Some (Ir_type (Record { rec_name = record.name; rec_fields }))
 
-  let lift_enum name (constants: Clang.Ast.enum_constant list) _complete_definition _attributes =
-      let ir_variants : ir_enum_variant list = List.map
-        (fun (constant:Clang.Ast.enum_constant) ->
-          let t = constant.desc in
-          let name = t.constant_name in
-          (* let name = constant.variant_name in *)
-          Printf.printf "Found enum variant name %s\n" name;
-         { variant_name = name; constant = 0 })
-         constants
-      in
-    if name = "" then None else Some (Ir_type (Enum { enum_name = name; enum_variants = ir_variants }))
+  let lift_enum name (constants : Clang.Ast.enum_constant list)
+      _complete_definition _attributes =
+    let ir_variants : ir_enum_variant list =
+      List.mapi
+        (fun i (constant : Clang.Ast.enum_constant) ->
+          let desc = constant.desc in
+          { variant_name = desc.constant_name; constant = i })
+        constants
+    in
+    if name = "" then None
+    else Some (Ir_type (Enum { enum_name = name; enum_variants = ir_variants }))
 
   let lift_function_param (param : Clang.Ast.parameter) =
     (param.desc.name, lift_type param.desc.qual_type)
@@ -101,7 +101,7 @@ module Lift = struct
               None)
         node.items
     in
-    { lib_name = name; header ;items }
+    { lib_name = name; header; items }
 end
 
 let lift = Lift.lift
