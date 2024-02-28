@@ -11,6 +11,17 @@ let lid name =
 
 let type_name name = String.lowercase_ascii name |> with_loc
 
+let variant_from_enum (ir_enum : Ir.ir_enum_variant) : constructor_declaration =
+  (* C enums don't carry data so most of the fields are left empty / default *)
+  {
+    pcd_name = with_loc ir_enum.variant_name;
+    pcd_vars = [];
+    pcd_args = Pcstr_tuple [];
+    pcd_res = None;
+    pcd_loc = loc;
+    pcd_attributes = [];
+  }
+
 let rec core_type_from_ir typ =
   match typ with
   | Ir.Abstract name -> Typ.constr (lid name) []
@@ -30,24 +41,10 @@ let rec core_type_from_ir typ =
         (core_type_from_ir fn_ret) fn_params
 
 let type_from_ir typ =
-  let open Ir in
   match typ with
   | Ir.Abstract name -> Some (Type.mk ~loc (type_name name))
   | Ir.Enum { enum_name; enum_variants } ->
-      let variants =
-        List.map
-          (fun v ->
-            (* C enums don't carry data so most of the fields are left empty / default *)
-            {
-              pcd_name = { txt = v.variant_name; loc = Location.none };
-              pcd_vars = [];
-              pcd_args = Pcstr_tuple [];
-              pcd_res = None;
-              pcd_loc = Location.none;
-              pcd_attributes = [];
-            })
-          enum_variants
-      in
+      let variants = List.map variant_from_enum enum_variants in
       let kind = Ptype_variant variants in
       Some (Type.mk ~loc ~kind (type_name enum_name))
   | Ir.Record { rec_name; rec_fields } ->
