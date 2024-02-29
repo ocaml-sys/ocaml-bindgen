@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include "doggo.h"
 
-static const char* BreedToString[3] = {
+static const char* BreedToString[4] = {
   "Labrador",
   "Golden Retriever",
   "Pug",
+  "Poodle"
 };
 
 void eleven_out_of_ten_majestic_af(Doggo* pupper) {
