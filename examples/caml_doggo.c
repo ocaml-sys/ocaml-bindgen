@@ -11,16 +11,18 @@ Doggo* caml_Doggo_of_value(value caml_x) {
   x->many = Int_val(Field(caml_x, 0));
   x->breed = Int_val(Field(caml_x, 1));
   x->wow = Int_val(Field(caml_x, 2));
+  x->weight = Double_val(Field(caml_x, 3));
   return x;
 }
 
 value caml_Doggo_to_value(struct Doggo* x) {
   CAMLparam0();
   CAMLlocal1(caml_x);
-  caml_x = caml_alloc_tuple(3);
+  caml_x = caml_alloc_tuple(4);
   Store_field(caml_x, 0, Val_int(x->many));
   Store_field(caml_x, 1, Val_int(x->breed));
   Store_field(caml_x, 2, Val_int(x->wow));
+  Store_field(caml_x, 3, caml_copy_double(x->weight));
   CAMLreturn(caml_x);
 }
 

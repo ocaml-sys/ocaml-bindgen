@@ -7,6 +7,7 @@ type nonrec breed =
 type nonrec doggo = {
   many: int ;
   breed: breed ;
-  wow: char }
+  wow: char ;
+  weight: float }
 external eleven_out_of_ten_majestic_af :
   pupper:doggo -> unit = "caml_eleven_out_of_ten_majestic_af"
