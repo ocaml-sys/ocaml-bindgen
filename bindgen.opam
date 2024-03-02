@@ -10,6 +10,7 @@ homepage: "https://github.com/ocaml-sys/ocaml-bindgen"
 bug-reports: "https://github.com/ocaml-sys/ocaml-bindgen/issues"
 depends: [
   "clangml" {>= "4.8.0"}
+  "stringext"
   "ocaml"
   "dune" {>= "3.13"}
   "odoc" {with-doc}
