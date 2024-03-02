@@ -1,4 +1,4 @@
-type ir_prim_type = Int | Bool | Char | Void
+type ir_prim_type = Int | Float | Bool | Char | Void
 
 type ir_type =
   | Abstract of string
@@ -23,6 +23,7 @@ module Lift = struct
     (* Format.printf "lift_type: %S\n" (Clang.Type.show typ); *)
     match typ.desc with
     | Clang.Ast.BuiltinType Int -> Prim Int
+    | Clang.Ast.BuiltinType Float -> Prim Float
     | Clang.Ast.BuiltinType Bool -> Prim Bool
     | Clang.Ast.BuiltinType Char_S -> Prim Char
     | Clang.Ast.BuiltinType Void -> Prim Void
