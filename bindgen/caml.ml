@@ -11,24 +11,10 @@ let lid name =
 
 let type_name name = String.lowercase_ascii name |> with_loc
 
-(** Converts a C identifier to one compatible with OCaml variant constuctor naming *)
-let enum_valid_name ?(prefix_underscore = false) name : string =
-  let rec rm_underscore_and_capitalize s =
-    if String.length s = 0 then s
-    else
-      match String.get s 0 with
-      | '_' ->
-          let prefix = if prefix_underscore then "Under" else "" in
-          prefix
-          ^ rm_underscore_and_capitalize (String.sub s 1 (String.length s - 1))
-      | _ -> String.capitalize_ascii s
-  in
-  rm_underscore_and_capitalize name
-
 let variant_from_enum (ir_enum : Ir.ir_enum_variant) : constructor_declaration =
   (* C enums don't carry data so most of the fields are left empty / default *)
   {
-    pcd_name = with_loc (enum_valid_name ir_enum.variant_name);
+    pcd_name = with_loc ("C_" ^ ir_enum.variant_name);
     pcd_vars = [];
     pcd_args = Pcstr_tuple [];
     pcd_res = None;
