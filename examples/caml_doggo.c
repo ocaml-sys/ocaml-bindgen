@@ -33,4 +33,10 @@ void caml_eleven_out_of_ten_majestic_af(value caml_pupper) {
   CAMLreturn0;
 }
 
+void caml_no_input_no_output() {
+  CAMLparam0();
+  no_input_no_output();
+  CAMLreturn0;
+}
+
 
