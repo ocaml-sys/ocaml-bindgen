@@ -10,3 +10,4 @@ type nonrec doggo = {
   wow: char }
 external eleven_out_of_ten_majestic_af :
   pupper:doggo -> unit = "caml_eleven_out_of_ten_majestic_af"
+external no_input_no_output : unit -> unit = "caml_no_input_no_output"
