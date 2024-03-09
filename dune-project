@@ -22,7 +22,8 @@
  (description "A longer description")
  (depends
    (clangml (>= "4.8.0"))
-   ocaml 
+   stringext
+   ocaml
    dune)
  (tags
   (topics "to describe" your project)))
