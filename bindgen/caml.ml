@@ -32,13 +32,20 @@ let rec core_type_from_ir typ =
   | Ir.Prim Char -> Typ.constr (lid "char") []
   | Ir.Prim Void -> Typ.constr (lid "unit") []
   | Ir.Ptr t -> core_type_from_ir t
-  | Ir.Func { fn_ret; fn_params } ->
-      List.fold_left
-        (fun acc (name, typ) ->
-          let label = Asttypes.Labelled name in
-          let typ = core_type_from_ir typ in
-          Typ.arrow label typ acc)
-        (core_type_from_ir fn_ret) fn_params
+  | Ir.Func { fn_ret; fn_params } -> (
+      match fn_params with
+      | [] ->
+          (* If the C function declaration has no parameters we must introduce a `unit` param *)
+          Typ.arrow Asttypes.Nolabel
+            (core_type_from_ir (Ir.Prim Void))
+            (core_type_from_ir fn_ret)
+      | params ->
+          List.fold_left
+            (fun acc (name, typ) ->
+              let label = Asttypes.Labelled name in
+              let typ = core_type_from_ir typ in
+              Typ.arrow label typ acc)
+            (core_type_from_ir fn_ret) params)
 
 let type_from_ir typ =
   match typ with

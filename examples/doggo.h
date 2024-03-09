@@ -12,3 +12,5 @@ typedef struct Doggo {
 } Doggo;
 
 void eleven_out_of_ten_majestic_af(Doggo* pupper);
+
+void no_input_no_output(void);
