@@ -1,4 +1,5 @@
 (library
+ (public_name bindgen)
  (name bindgen)
  (preprocess
   (pps ppxlib.metaquot))
