@@ -1,5 +1,6 @@
 (executable
   (name main)
+  (libraries bindgen)
  (foreign_stubs
   (language c)
   (names doggo caml_doggo)

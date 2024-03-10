@@ -6,36 +6,10 @@
 #include <caml/memory.h>
 #include <caml/mlvalues.h>
 #include <caml/unixsupport.h>
-Doggo* caml_Doggo_of_value(value caml_x) {
-  Doggo* x = malloc(sizeof(struct Doggo));
-  x->many = Int_val(Field(caml_x, 0));
-  x->breed = Int_val(Field(caml_x, 1));
-  x->wow = Int_val(Field(caml_x, 2));
-  x->weight = Double_val(Field(caml_x, 3));
-  return x;
-}
-
-value caml_Doggo_to_value(struct Doggo* x) {
-  CAMLparam0();
-  CAMLlocal1(caml_x);
-  caml_x = caml_alloc_tuple(4);
-  Store_field(caml_x, 0, Val_int(x->many));
-  Store_field(caml_x, 1, Val_int(x->breed));
-  Store_field(caml_x, 2, Val_int(x->wow));
-  Store_field(caml_x, 3, caml_copy_double(x->weight));
-  CAMLreturn(caml_x);
-}
-
-void caml_eleven_out_of_ten_majestic_af(value caml_pupper) {
-  CAMLparam1(caml_pupper);
-  Doggo* pupper = caml_Doggo_of_value(caml_pupper);
-  eleven_out_of_ten_majestic_af(pupper);
-  CAMLreturn0;
-}
-
-void caml_no_input_no_output() {
-  CAMLparam0();
-  no_input_no_output();
+void caml_print_age(value caml_age) {
+  CAMLparam1(caml_age);
+  int* age = caml_int_of_value(caml_age);
+  print_age(age);
   CAMLreturn0;
 }
 

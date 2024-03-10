@@ -1,6 +1,6 @@
 open Doggo
 
-let pupper = {
+(* let pupper = {
   many=2112;
   wow='x';
   breed=C_Labrador;
@@ -8,4 +8,9 @@ let pupper = {
 }
 
 let () =
-  Doggo.eleven_out_of_ten_majestic_af ~pupper
+  Doggo.eleven_out_of_ten_majestic_af ~pupper *)
+
+let char_ptr_of_string = 
+
+let () =
+  greet_dog ~dog_name:"Puppy"

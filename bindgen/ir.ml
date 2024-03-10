@@ -20,7 +20,7 @@ module Lift = struct
     match name with Clang.Ast.IdentifierName x -> x | _ -> assert false
 
   let rec lift_type (typ : Clang.Type.t) =
-    (* Format.printf "lift_type: %S\n" (Clang.Type.show typ); *)
+    Format.printf "lift_type: %S\n" (Clang.Type.show typ); flush stdout;
     match typ.desc with
     | Clang.Ast.BuiltinType Int -> Prim Int
     | Clang.Ast.BuiltinType Float -> Prim Float
