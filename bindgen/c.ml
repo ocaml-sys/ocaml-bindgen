@@ -190,12 +190,20 @@ module Shims = struct
             List.map
               (fun (name, param_type) ->
                 let c_type = ctype_of_ir param_type in
-                let c_type_name = ctype_name c_type in
-                decl c_type name
-                  (Some
-                     (call
-                        (caml_ ^ c_type_name ^ "_of_value")
-                        [ var (caml_ ^ name) ])))
+                match c_type with
+                | Ptr _t ->
+                    let _c_type_name = ctype_name c_type in
+                    decl c_type name
+                      (Some
+                         (call "Nativeint_val"
+                            [ call "Field" [ var (caml_ ^ name); int 1 ] ]))
+                | _ ->
+                    let c_type_name = ctype_name c_type in
+                    decl c_type name
+                      (Some
+                         (call
+                            (caml_ ^ c_type_name ^ "_of_value")
+                            [ var (caml_ ^ name) ])))
               fn_params
           in
 

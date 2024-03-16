@@ -1,16 +1,10 @@
-open Doggo
+(* open Doggo *)
 
-(* let pupper = {
-  many=2112;
-  wow='x';
-  breed=C_Labrador;
-  weight=18.9;
-}
+module Doggo = struct
+  include Doggo_sys
+  (** Here is where we would write our wrappers around the raw bindings *)
 
-let () =
-  Doggo.eleven_out_of_ten_majestic_af ~pupper *)
+  let wrapper_print_age (age : int) = print_age ~age:(create_ptr age)
+end
 
-let char_ptr_of_string = 
-
-let () =
-  greet_dog ~dog_name:"Puppy"
+let () = Doggo.wrapper_print_age 25

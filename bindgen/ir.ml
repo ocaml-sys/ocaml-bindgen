@@ -20,7 +20,7 @@ module Lift = struct
     match name with Clang.Ast.IdentifierName x -> x | _ -> assert false
 
   let rec lift_type (typ : Clang.Type.t) =
-    Format.printf "lift_type: %S\n" (Clang.Type.show typ); flush stdout;
+    (* Format.printf "lift_type: %S\n" (Clang.Type.show typ); flush stdout; *)
     match typ.desc with
     | Clang.Ast.BuiltinType Int -> Prim Int
     | Clang.Ast.BuiltinType Float -> Prim Float
@@ -106,3 +106,9 @@ module Lift = struct
 end
 
 let lift = Lift.lift
+
+let string_of_prim prim =
+  match prim with
+  | Int -> "Int"
+  | Char -> "Char"
+  | Float | Bool | Void -> "Other (TODO)"

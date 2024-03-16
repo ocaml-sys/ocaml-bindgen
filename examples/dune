@@ -1,6 +1,6 @@
 (executable
-  (name main)
-  (libraries bindgen)
+ (name main)
+ (libraries bindgen)
  (foreign_stubs
   (language c)
   (names doggo caml_doggo)
@@ -9,13 +9,9 @@
 
 (rule
  (alias all)
- (targets
-   doggo.ml
-   caml_doggo.c
-  )
+ (targets doggo_sys.ml caml_doggo.c)
  (deps doggo.h)
  (action
-  (run
-   %{bin:ocaml-bindgen} doggo.h doggo))
+  (run %{bin:ocaml-bindgen} doggo.h doggo))
  (mode
   (promote (until-clean))))
