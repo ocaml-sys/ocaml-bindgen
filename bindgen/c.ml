@@ -1,7 +1,7 @@
 let caml_ = "caml_"
 
 type c_type = Prim of string | Struct of string | Ptr of c_type | Void
-type c_prim = Int of int | Str of string
+type c_prim = Int of int | Float of float | Str of string
 
 type t =
   | C_function of {
@@ -22,7 +22,6 @@ type t =
   | C_include of string
 
 type program = t list
-
 
 let pp_list sep pp_el fmt t =
   Format.pp_print_list
@@ -66,6 +65,7 @@ and pp_type fmt (ctype : c_type) =
 and pp_prim fmt (prim : c_prim) =
   match prim with
   | Int d -> Format.fprintf fmt "%d" d
+  | Float f -> Format.fprintf fmt "%f" f
   | Str s -> Format.fprintf fmt "%s" s
 
 let decl dcl_type dcl_name dcl_value = C_decl { dcl_name; dcl_type; dcl_value }
@@ -73,6 +73,7 @@ let call cc_name cc_args = C_call { cc_name; cc_args }
 let var x = C_variable x
 let assign asg_var asg_value = C_assign { asg_var; asg_value }
 let int x = C_prim (Int x)
+let float f = C_prim (Float f)
 let string x = C_prim (Str x)
 let ptr_field pfa_name pfa_field = C_ptr_field_access { pfa_name; pfa_field }
 let typ t = C_type t
@@ -90,7 +91,9 @@ let caml_alloc_tuple fields =
 
 let store_field var idx value = call "Store_field" [ var; int idx; value ]
 let val_int var name = call "Val_int" [ ptr_field var name ]
-let int_val var idx = call "Int_val" [ call "Field" [ var; int idx] ]
+let int_val var idx = call "Int_val" [ call "Field" [ var; int idx ] ]
+let val_float var name = call "caml_copy_double" [ ptr_field var name ]
+let float_val var idx = call "Double_val" [ call "Field" [ var; int idx ] ]
 
 (* from_ir *)
 let rec ctype_of_ir (ir_type : Ir.ir_type) =
@@ -99,6 +102,7 @@ let rec ctype_of_ir (ir_type : Ir.ir_type) =
   | Ir.Record { rec_name; _ } -> Prim rec_name
   | Ir.Enum { enum_name; _ } -> Prim enum_name
   | Ir.Prim Ir.Int -> Prim "int"
+  | Ir.Prim Ir.Float -> Prim "float"
   | Ir.Prim Ir.Bool -> Prim "bool"
   | Ir.Prim Ir.Char -> Prim "char"
   | Ir.Prim Ir.Void -> Void
@@ -127,9 +131,13 @@ module Shims = struct
           ]
           @ Ir.(
               List.mapi
-                (fun idx field ->
-                  store_field (var "caml_x") idx
-                    (val_int (var "x") field.fld_name))
+                (fun idx fld ->
+                  let fld_caml_value =
+                    match fld.fld_type with
+                    | Prim Float -> val_float (var "x") fld.fld_name
+                    | _ -> val_int (var "x") fld.fld_name
+                  in
+                  store_field (var "caml_x") idx fld_caml_value)
                 fields)
           @ [ caml_return (var "caml_x") ];
       }
@@ -148,9 +156,12 @@ module Shims = struct
           @ Ir.(
               List.mapi
                 (fun idx fld ->
-                  assign
-                    (ptr_field (var "x") fld.fld_name)
-                    (int_val (var "caml_x") idx))
+                  let field_c_value =
+                    match fld.fld_type with
+                    | Prim Float -> float_val (var "caml_x") idx
+                    | _ -> int_val (var "caml_x") idx
+                  in
+                  assign (ptr_field (var "x") fld.fld_name) field_c_value)
                 fields)
           @ [ return (var "x") ];
       }
@@ -162,7 +173,10 @@ module Shims = struct
 
         let fn_body =
           let declare_params =
-            [ caml_params (List.map (fun (name, _type) -> var (caml_^name)) fn_params ) ]
+            [
+              caml_params
+                (List.map (fun (name, _type) -> var (caml_ ^ name)) fn_params);
+            ]
           in
           let maybe_declare_result =
             match fn_ret with
@@ -174,12 +188,20 @@ module Shims = struct
             List.map
               (fun (name, param_type) ->
                 let c_type = ctype_of_ir param_type in
-                let c_type_name = ctype_name c_type in
-                decl c_type name
-                  (Some
-                     (call
-                        (caml_ ^ c_type_name ^ "_of_value")
-                        [ var (caml_ ^ name) ])))
+                match c_type with
+                | Ptr _t ->
+                    let _c_type_name = ctype_name c_type in
+                    decl c_type name
+                      (Some
+                         (call "Nativeint_val"
+                            [ call "Field" [ var (caml_ ^ name); int 1 ] ]))
+                | _ ->
+                    let c_type_name = ctype_name c_type in
+                    decl c_type name
+                      (Some
+                         (call
+                            (caml_ ^ c_type_name ^ "_of_value")
+                            [ var (caml_ ^ name) ])))
               fn_params
           in
 
@@ -224,17 +246,16 @@ let from_ir (ir : Ir.t) : program =
     C_include "<caml/mlvalues.h>";
     C_include "<caml/unixsupport.h>";
   ]
-  @
-  (List.filter_map
-    (fun node ->
-      match node with
-      | Ir.Ir_fun_decl fun_decl -> Some [ Shims.wrap_fun fun_decl ]
-      | Ir.Ir_type (Record { rec_name; rec_fields }) ->
-          Some
-            [
-              Shims.of_value rec_name rec_fields;
-              Shims.to_value rec_name rec_fields;
-            ]
-      | _ -> None)
-    ir.items
-  |> List.flatten)
+  @ (List.filter_map
+       (fun node ->
+         match node with
+         | Ir.Ir_fun_decl fun_decl -> Some [ Shims.wrap_fun fun_decl ]
+         | Ir.Ir_type (Record { rec_name; rec_fields }) ->
+             Some
+               [
+                 Shims.of_value rec_name rec_fields;
+                 Shims.to_value rec_name rec_fields;
+               ]
+         | _ -> None)
+       ir.items
+    |> List.flatten)

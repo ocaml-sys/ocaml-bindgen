@@ -1,4 +1,4 @@
-type ir_prim_type = Int | Bool | Char | Void
+type ir_prim_type = Int | Float | Bool | Char | Void
 
 type ir_type =
   | Abstract of string
@@ -20,9 +20,11 @@ module Lift = struct
     match name with Clang.Ast.IdentifierName x -> x | _ -> assert false
 
   let rec lift_type (typ : Clang.Type.t) =
-    (* Format.printf "lift_type: %S\n" (Clang.Type.show typ); *)
+    (* Format.printf "lift_type: %S\n" (Clang.Type.show typ); flush stdout; *)
     match typ.desc with
     | Clang.Ast.BuiltinType Int -> Prim Int
+    | Clang.Ast.BuiltinType Float -> Prim Float
+    | Clang.Ast.BuiltinType Double -> Prim Float
     | Clang.Ast.BuiltinType Bool -> Prim Bool
     | Clang.Ast.BuiltinType Char_S -> Prim Char
     | Clang.Ast.BuiltinType Void -> Prim Void
@@ -105,3 +107,9 @@ module Lift = struct
 end
 
 let lift = Lift.lift
+
+let string_of_prim prim =
+  match prim with
+  | Int -> "Int"
+  | Char -> "Char"
+  | Float | Bool | Void -> "Other (TODO)"

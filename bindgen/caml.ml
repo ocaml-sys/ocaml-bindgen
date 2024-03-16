@@ -28,10 +28,11 @@ let rec core_type_from_ir typ =
   | Ir.Enum { enum_name; _ } -> Typ.constr (lid enum_name) []
   | Ir.Record { rec_name; _ } -> Typ.constr (lid rec_name) []
   | Ir.Prim Int -> Typ.constr (lid "int") []
+  | Ir.Prim Float -> Typ.constr (lid "float") []
   | Ir.Prim Bool -> Typ.constr (lid "bool") []
   | Ir.Prim Char -> Typ.constr (lid "char") []
   | Ir.Prim Void -> Typ.constr (lid "unit") []
-  | Ir.Ptr t -> core_type_from_ir t
+  | Ir.Ptr t -> Typ.constr (lid "cptr") [ core_type_from_ir t ]
   | Ir.Func { fn_ret; fn_params } -> (
       match fn_params with
       | [] ->
