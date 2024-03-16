@@ -92,8 +92,6 @@ let caml_alloc_tuple fields =
 let store_field var idx value = call "Store_field" [ var; int idx; value ]
 let val_int var name = call "Val_int" [ ptr_field var name ]
 let int_val var idx = call "Int_val" [ call "Field" [ var; int idx ] ]
-
-(* Unlike Int, Float must be re-boxed before returning to the OCaml runtime thus a copy*)
 let val_float var name = call "caml_copy_double" [ ptr_field var name ]
 let float_val var idx = call "Double_val" [ call "Field" [ var; int idx ] ]
 

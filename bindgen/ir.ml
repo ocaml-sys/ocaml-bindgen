@@ -24,6 +24,7 @@ module Lift = struct
     match typ.desc with
     | Clang.Ast.BuiltinType Int -> Prim Int
     | Clang.Ast.BuiltinType Float -> Prim Float
+    | Clang.Ast.BuiltinType Double -> Prim Float
     | Clang.Ast.BuiltinType Bool -> Prim Bool
     | Clang.Ast.BuiltinType Char_S -> Prim Char
     | Clang.Ast.BuiltinType Void -> Prim Void
